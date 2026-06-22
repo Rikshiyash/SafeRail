@@ -1,0 +1,11 @@
+[
+  "vibration_hz",
+  "strain_microstrain",
+  "temperature_celsius",
+  "humidity_percent",
+  "days_since_inspection",
+  "zone_encoded",
+  "vibration_spike",
+  "heat_stress",
+  "combined_stress"
+]
