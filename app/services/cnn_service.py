@@ -16,7 +16,7 @@ class CNNService:
             with open(os.path.join(base_dir, "classes.json"), "r") as f:
                 self.classes = json.load(f)
                 
-            self.model = models.mobilenet_v2(pretrained=False)
+            self.model = models.mobilenet_v2(weights=None)
             self.model.classifier = nn.Sequential(
                 nn.Dropout(0.3),
                 nn.Linear(1280, 4)
