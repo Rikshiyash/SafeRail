@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import asyncio
@@ -77,13 +78,19 @@ app.add_middleware(CORSMiddleware,
     allow_origins=["*"], allow_credentials=True,
     allow_methods=["*"], allow_headers=["*"])
 
-from app.routers import segments, alerts as alerts_router, reports, crew
-from app.auth import verify_password, create_token
+from app.routers import segments, alerts as alerts_router, reports, crew, dev_auth
+from app.auth import verify_password, create_token, is_dev_mode
+
+# Add root redirect endpoint
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/docs")
 
 app.include_router(segments.router)
 app.include_router(alerts_router.router)
 app.include_router(reports.router)
 app.include_router(crew.router)
+app.include_router(dev_auth.router)
 
 class LoginRequest(BaseModel):
     email: str
@@ -91,13 +98,23 @@ class LoginRequest(BaseModel):
 
 @app.post("/api/auth/login")
 async def login(req: LoginRequest):
+    if is_dev_mode():
+        # Return deterministic mock token and user for development
+        token = create_token({"sub": "admin@railguard.in", "role": "admin"})
+        user = {
+            "user_id": "admin@railguard.in",
+            "name": "Admin",
+            "role": "admin",
+            "email": "admin@railguard.in",
+        }
+        return {"token": token, "user": user}
     query = users.select().where(users.c.email == req.email)
     user = await database.fetch_one(query)
     if not user or not verify_password(req.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    
     token = create_token({"sub": user["user_id"], "role": user["role"]})
     return {"token": token, "user": {"user_id": user["user_id"], "name": user["name"], "role": user["role"], "zone": user["zone"]}}
+
 
 @app.get("/health")
 async def health():
